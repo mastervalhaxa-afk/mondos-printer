@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id           String   @id @default(cuid())
+  customerName String
+  tableNumber  String?
+  items        OrderItem[]
+  totalAmount  Float
+  status       OrderStatus @default(PENDING)
+  timestamp    DateTime @default(now())
+  sheetRowId   String?  // Google Sheets row identifier
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  bills        Bill[]
+  
+  @@map("orders")
+}
+
+model OrderItem {
+  id     String @id @default(cuid())
+  name   String
+  price  Float
+  quantity Int @default(1)
+  orderId String
+  
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  @@map("order_items")
+}
+
+model Bill {
+  id          String      @id @default(cuid())
+  orderId     String
+  printStatus PrintStatus @default(PENDING)
+  printerName String?
+  printAttempts Int @default(0)
+  printedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  @@map("bills")
+}
+
+model GoogleSheetsConfig {
+  id            String @id @default(cuid())
+  spreadsheetId String
+  sheetName     String
+  lastSyncRow   Int @default(1)
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("google_sheets_config")
+}
+
+enum OrderStatus {
+  PENDING
+  PRINTING
+  PRINTED
+  ERROR
+}
+
+enum PrintStatus {
+  PENDING
+  PRINTING
+  PRINTED
+  FAILED
+}
